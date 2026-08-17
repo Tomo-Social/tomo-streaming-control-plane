@@ -134,6 +134,19 @@ export class StreamSessionManager {
     return { sessions: this.sessions.size, connectedPeers, byStatus };
   }
 
+  async reapIdle(maxIdleMs: number): Promise<number> {
+    if (!Number.isFinite(maxIdleMs) || maxIdleMs <= 0) return 0;
+    const cutoff = Date.now() - maxIdleMs;
+    const idle = [...this.sessions.values()].filter((session) =>
+      session.connectedCount === 0 && Date.parse(session.updatedAt) <= cutoff,
+    );
+    for (const session of idle) {
+      this.sessions.delete(session.id);
+      await this.docker.getContainer(session.containerId).stop({ t: 2 }).catch(() => {});
+    }
+    return idle.length;
+  }
+
   private owned(owner: string, id: string): SessionRecord {
     const session = this.sessions.get(id);
     if (!session || session.owner !== owner) throw new HttpError("stream session not found", 404, "session_not_found");

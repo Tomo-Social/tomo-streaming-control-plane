@@ -30,11 +30,16 @@ const sessions = new StreamSessionManager(docker, spawners, Number(process.env.M
 const api = createApiHandler(sessions, spawners);
 const server = createServer((request, response) => { void api(request, response); });
 new SignalingHub(server, sessions);
+const emptySessionTimeoutSeconds = Number(process.env.EMPTY_SESSION_TIMEOUT_SECONDS ?? 0);
+const idleReaper = emptySessionTimeoutSeconds > 0
+  ? setInterval(() => { void sessions.reapIdle(emptySessionTimeoutSeconds * 1000); }, 60_000)
+  : undefined;
 
 await sessions.reconcileOrphans();
 server.listen(port, "0.0.0.0", () => console.log(`[TOMO STREAMING] control plane listening on :${port}`));
 
 async function shutdown(): Promise<void> {
+  if (idleReaper) clearInterval(idleReaper);
   server.close(() => process.exit(0));
   setTimeout(() => process.exit(1), 5000).unref();
 }
