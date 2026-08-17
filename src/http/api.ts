@@ -6,6 +6,7 @@ import type { StreamSpawnerRegistry } from "../spawners/spawner.js";
 import type { CreateStreamInput } from "../types.js";
 
 type ApiKeys = Map<string, string>;
+type RateWindow = { startedAt: number; count: number };
 
 function configuredKeys(environment: NodeJS.ProcessEnv): ApiKeys {
   const keys = new Map<string, string>();
@@ -54,6 +55,8 @@ export function createApiHandler(
   environment: NodeJS.ProcessEnv = process.env,
 ): (request: IncomingMessage, response: ServerResponse) => Promise<void> {
   const keys = configuredKeys(environment);
+  const rateLimit = Math.max(0, Number.parseInt(environment.TOMO_STREAM_RATE_LIMIT ?? "120", 10) || 120);
+  const windows = new Map<string, RateWindow>();
   return async (request, response) => {
     response.setHeader("access-control-allow-origin", "*");
     response.setHeader("access-control-allow-methods", "GET, POST, DELETE, OPTIONS");
@@ -69,6 +72,18 @@ export function createApiHandler(
     if (keys.size === 0) { json(response, 503, { error: { code: "api_disabled", message: "TOMO_STREAM_API_KEY is not configured" } }); return; }
     const client = authenticate(request, keys);
     if (!client) { json(response, 401, { error: { code: "invalid_api_key", message: "a valid x-api-key header is required" } }); return; }
+    if (rateLimit > 0) {
+      const now = Date.now();
+      const current = windows.get(client);
+      const window = !current || now - current.startedAt >= 60_000 ? { startedAt: now, count: 1 } : { ...current, count: current.count + 1 };
+      windows.set(client, window);
+      if (windows.size > 10_000) for (const [name, entry] of windows) if (now - entry.startedAt >= 60_000) windows.delete(name);
+      if (window.count > rateLimit) {
+        response.setHeader("retry-after", "60");
+        json(response, 429, { error: { code: "rate_limited", message: "request rate limit exceeded" } });
+        return;
+      }
+    }
     try {
       if (request.method === "GET" && path === "/api/v1/metrics") {
         json(response, 200, { service: "tomo-streaming-control-plane", metrics: sessions.metrics() });

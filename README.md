@@ -127,6 +127,7 @@ The response exposes the player token in `session.connection`. The host token is
 | `AV_STREAM_SERVER_IMAGE` | `tomo-av-stream-server:local` | Camera/desktop runtime image |
 | `STREAM_SERVER_SIGNALING_URL` | local control plane | WebSocket URL used by runtime containers |
 | `MAX_STREAM_SESSIONS` | `4` | Local concurrent-session limit |
+| `TOMO_STREAM_RATE_LIMIT` | `120` | Authenticated API requests per client per minute; `0` disables the local guard |
 | `TOMO_STREAM_INSTANCE_ID` | `default` | Worker ownership boundary for container reconciliation |
 | `CAMERA_DEVICE_HOST` | — | Host V4L2 device, such as `/dev/video0` |
 | `X11_SOCKET_HOST` | — | Host X11 socket directory |
