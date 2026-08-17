@@ -9,7 +9,7 @@
 [![Docker](https://img.shields.io/badge/runtime-Docker-2496ED?logo=docker&logoColor=white)](https://www.docker.com/)
 [![License](https://img.shields.io/badge/license-PolyForm_Noncommercial-orange)](LICENSE.md)
 
-[Quick start](#quick-start) · [Public docs](https://docs.tomo.stream) · [API](#api) · [Architecture](#architecture) · [Self-host](https://github.com/Tomo-Social/tomo-streaming-self-hosted) · [TypeScript SDK](https://github.com/Tomo-Social/tomo-streaming-sdk)
+[Quick start](#quick-start) · [Public docs](https://tomo-streaming-docs.pages.dev) · [API](#api) · [Architecture](#architecture) · [Self-host](https://github.com/Tomo-Social/tomo-streaming-self-hosted) · [TypeScript SDK](https://github.com/Tomo-Social/tomo-streaming-sdk)
 
 </div>
 
