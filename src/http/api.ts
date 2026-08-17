@@ -57,7 +57,11 @@ export function createApiHandler(
   const keys = configuredKeys(environment);
   const rateLimit = Math.max(0, Number.parseInt(environment.TOMO_STREAM_RATE_LIMIT ?? "120", 10) || 120);
   const windows = new Map<string, RateWindow>();
+  let apiRequests = 0;
+  let authFailures = 0;
+  let rateLimited = 0;
   return async (request, response) => {
+    apiRequests += 1;
     response.setHeader("access-control-allow-origin", "*");
     response.setHeader("access-control-allow-methods", "GET, POST, DELETE, OPTIONS");
     response.setHeader("access-control-allow-headers", "content-type, x-api-key");
@@ -71,7 +75,7 @@ export function createApiHandler(
     if (path !== "/api/v1/metrics" && path !== "/api/v1/streams" && !path.startsWith("/api/v1/streams/")) { json(response, 404, { error: { code: "not_found", message: "route not found" } }); return; }
     if (keys.size === 0) { json(response, 503, { error: { code: "api_disabled", message: "TOMO_STREAM_API_KEY is not configured" } }); return; }
     const client = authenticate(request, keys);
-    if (!client) { json(response, 401, { error: { code: "invalid_api_key", message: "a valid x-api-key header is required" } }); return; }
+    if (!client) { authFailures += 1; json(response, 401, { error: { code: "invalid_api_key", message: "a valid x-api-key header is required" } }); return; }
     if (rateLimit > 0) {
       const now = Date.now();
       const current = windows.get(client);
@@ -79,6 +83,7 @@ export function createApiHandler(
       windows.set(client, window);
       if (windows.size > 10_000) for (const [name, entry] of windows) if (now - entry.startedAt >= 60_000) windows.delete(name);
       if (window.count > rateLimit) {
+        rateLimited += 1;
         response.setHeader("retry-after", "60");
         json(response, 429, { error: { code: "rate_limited", message: "request rate limit exceeded" } });
         return;
@@ -86,7 +91,12 @@ export function createApiHandler(
     }
     try {
       if (request.method === "GET" && path === "/api/v1/metrics") {
-        json(response, 200, { service: "tomo-streaming-control-plane", metrics: sessions.metrics() });
+        json(response, 200, { service: "tomo-streaming-control-plane", metrics: {
+          ...sessions.metrics(),
+          apiRequests,
+          authFailures,
+          rateLimited,
+        } });
         return;
       }
       if (path === "/api/v1/streams" && request.method === "GET") { json(response, 200, { sessions: await sessions.list(client) }); return; }
