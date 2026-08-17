@@ -89,6 +89,7 @@ Discovery is public. Session operations require `x-api-key`.
 | --- | --- | --- |
 | `GET` | `/health` | Process health check |
 | `GET` | `/api/v1/stream-servers` | Discover registered runtimes and capabilities |
+| `GET` | `/api/v1/metrics` | Read session and connected-peer counters (API key required) |
 | `GET` | `/api/v1/streams` | List sessions owned by the API client |
 | `POST` | `/api/v1/streams` | Create a stream session |
 | `GET` | `/api/v1/streams/:id` | Read live state and participant count |

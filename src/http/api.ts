@@ -65,11 +65,15 @@ export function createApiHandler(
       json(response, 200, { apiVersion: "1", runtime: "stream-server", streamServers: spawners.list() });
       return;
     }
-    if (path !== "/api/v1/streams" && !path.startsWith("/api/v1/streams/")) { json(response, 404, { error: { code: "not_found", message: "route not found" } }); return; }
+    if (path !== "/api/v1/metrics" && path !== "/api/v1/streams" && !path.startsWith("/api/v1/streams/")) { json(response, 404, { error: { code: "not_found", message: "route not found" } }); return; }
     if (keys.size === 0) { json(response, 503, { error: { code: "api_disabled", message: "TOMO_STREAM_API_KEY is not configured" } }); return; }
     const client = authenticate(request, keys);
     if (!client) { json(response, 401, { error: { code: "invalid_api_key", message: "a valid x-api-key header is required" } }); return; }
     try {
+      if (request.method === "GET" && path === "/api/v1/metrics") {
+        json(response, 200, { service: "tomo-streaming-control-plane", metrics: sessions.metrics() });
+        return;
+      }
       if (path === "/api/v1/streams" && request.method === "GET") { json(response, 200, { sessions: await sessions.list(client) }); return; }
       if (path === "/api/v1/streams" && request.method === "POST") {
         json(response, 201, { session: await sessions.create(client, await body<CreateStreamInput>(request)) });

@@ -18,6 +18,12 @@ type SessionRecord = {
   updatedAt: string;
 };
 
+export interface StreamSessionMetrics {
+  sessions: number;
+  connectedPeers: number;
+  byStatus: Record<SessionStatus, number>;
+}
+
 export class StreamSessionManager {
   private readonly sessions = new Map<string, SessionRecord>();
 
@@ -116,6 +122,16 @@ export class StreamSessionManager {
     session.connectedCount = Math.max(0, count);
     if (session.status !== "paused") session.status = "running";
     session.updatedAt = new Date().toISOString();
+  }
+
+  metrics(): StreamSessionMetrics {
+    const byStatus: Record<SessionStatus, number> = { starting: 0, running: 0, paused: 0, offline: 0 };
+    let connectedPeers = 0;
+    for (const session of this.sessions.values()) {
+      byStatus[session.status] += 1;
+      connectedPeers += session.connectedCount;
+    }
+    return { sessions: this.sessions.size, connectedPeers, byStatus };
   }
 
   private owned(owner: string, id: string): SessionRecord {

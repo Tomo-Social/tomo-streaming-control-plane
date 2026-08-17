@@ -11,6 +11,7 @@ const fakeSessions = {
   async get() { return null; },
   async action() { throw new Error("unused"); },
   async remove() { return false; },
+  metrics() { return { sessions: 1, connectedPeers: 2, byStatus: { starting: 0, running: 1, paused: 0, offline: 0 } }; },
 } as unknown as StreamSessionManager;
 const fakeSpawners = { list: () => [{ id: "camera-stream-server" }] } as unknown as StreamSpawnerRegistry;
 const key = "test-stream-key-with-24-characters";
@@ -44,4 +45,11 @@ test("control plane creates generic sessions without social identity", async () 
   const payload = await response.json() as { session: { owner: string; input: { type: string } } };
   assert.equal(payload.session.owner, "default");
   assert.equal(payload.session.input.type, "desktop-stream-server");
+});
+
+test("metrics are protected by the integration key", async () => {
+  assert.equal((await fetch(`${baseUrl}/api/v1/metrics`)).status, 401);
+  const response = await fetch(`${baseUrl}/api/v1/metrics`, { headers: { "x-api-key": key } });
+  assert.equal(response.status, 200);
+  assert.deepEqual((await response.json() as { metrics: { connectedPeers: number } }).metrics.connectedPeers, 2);
 });
